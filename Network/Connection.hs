@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
 -- |
 -- Module      : Network.Connection
 -- License     : BSD-style
@@ -76,10 +77,16 @@ import qualified Data.ByteString.Lazy as L
 
 import System.Environment
 import System.Timeout
-import System.IO
+import System.IO hiding (IO)
 import qualified Data.Map as M
 
 import Network.Connection.Types
+
+import GHC.Stack
+import Prelude hiding (IO)
+import qualified Prelude
+
+type IO a = HasCallStack => Prelude.IO a
 
 type Manager = MVar (M.Map TLS.SessionID TLS.SessionData)
 
@@ -220,7 +227,7 @@ connectTo cg cParams = do
                     (\sock -> connect sock (addrAddress addr) >> return sock)
             firstSuccessful = go []
               where
-                go :: [E.IOException] -> [IO a] -> IO a
+                go :: [E.IOException] -> [Prelude.IO a] -> IO a
                 go []      [] = E.throwIO $ HostNotResolved host
                 go l@(_:_) [] = E.throwIO $ HostCannotConnect host l
                 go acc     (act:followingActs) = do
